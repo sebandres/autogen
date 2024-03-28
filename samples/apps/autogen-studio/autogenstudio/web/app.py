@@ -15,7 +15,7 @@ from openai import OpenAIError
 from ..version import VERSION, APP_NAME
 
 
-from ..models.db import Agent, Message, Model, Session, Skill, Workflow
+from ..models.db import Agent, DBResponseModel, Message, Model, Session, Skill, Workflow
 from ..models.dbmanager import DBManager
 from ..utils import md5_hash, init_app_folders, dbutils, test_model
 from ..chatmanager import AutoGenChatManager, WebSocketConnectionManager
@@ -124,13 +124,8 @@ def create_entity(model: Any, model_class: Any, filters: dict = None):
     """Create a new entity"""
     model = check_and_cast_datetime_fields(model)
     try:
-        status_message = dbmanager.upsert(model)
-        entities = dbmanager.get(model_class, filters=filters, return_json=True)
-        return {
-            "status": True,
-            "message": f"Success - {model_class.__name__} {status_message}",
-            "data": entities,
-        }
+        response: DBResponseModel = dbmanager.upsert(model)
+        return response.model_dump()
 
     except Exception as ex_error:
         print(ex_error)

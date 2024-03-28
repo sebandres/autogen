@@ -1,6 +1,7 @@
 from sqlmodel import SQLModel, Session, create_engine, select, and_
 from datetime import datetime
 import logging
+from .db import DBResponseModel
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -21,21 +22,29 @@ class DBManager:
         """Create a new entity"""
         # check if the model exists, update else add
         model_class = type(model)
-        current_model = self.session.exec(
+        existing_model = self.session.exec(
             select(model_class).where(model_class.id == model.id)
         ).first()
-        if current_model:
+        if existing_model:
             model.updated_at = datetime.now()
             for key, value in model.model_dump().items():
-                setattr(current_model, key, value)
-            self.session.add(current_model)
+                setattr(existing_model, key, value)
+            model = existing_model
+            self.session.add(model)
         else:
             self.session.add(model)
         self.session.commit()
-        status_message = (
-            "Item Updated Successfully " if current_model else "Item Added Successfully"
+
+        self.session.refresh(model)
+        response = DBResponseModel(
+            message=f"{model_class.__name__} Updated Successfully "
+            if existing_model
+            else f"{model_class.__name__} Created Successfully",
+            status=True,
+            data=model.model_dump(),
         )
-        return status_message
+
+        return response
 
     def _model_to_dict(self, model_obj):
         return {

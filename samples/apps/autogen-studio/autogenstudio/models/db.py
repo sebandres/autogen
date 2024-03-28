@@ -207,3 +207,9 @@ class Workflow(SQLModel, table=True):
         default=WorkFlowSummaryMethod.last,
         sa_column=Column(SqlEnum(WorkFlowSummaryMethod)),
     )
+
+
+class DBResponseModel(SQLModel):
+    message: str
+    status: bool
+    data: Any
