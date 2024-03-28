@@ -47,7 +47,7 @@ const AgentsView = ({}: any) => {
 
   const [showAgentModal, setShowAgentModal] = React.useState(false);
 
-  const sampleAgent = sampleAgentConfig(user?.email || "");
+  const sampleAgent = sampleAgentConfig();
   const [newAgent, setNewAgent] = React.useState<IAgentFlowSpec | null>(
     sampleAgent
   );
@@ -251,14 +251,7 @@ const AgentsView = ({}: any) => {
 
     return (
       <Modal
-        title={
-          <>
-            Agent Specification{" "}
-            <span className="text-accent font-normal">
-              {agent?.config?.name || ""}
-            </span>{" "}
-          </>
-        }
+        title={<>Agent Configuration</>}
         width={800}
         open={showAgentModal}
         onOk={() => {
