@@ -9,8 +9,10 @@ using System.Threading.Channels;
 using System.Threading.Tasks;
 using Amazon.BedrockRuntime;
 using Amazon.BedrockRuntime.Model;
+using Amazon.Runtime;
 using Amazon.Runtime.EventStreams;
 using Amazon.Util;
+using AutoGen.AWS.Agent;
 using AutoGen.Core;
 
 namespace AutoGen.AWS;
@@ -25,27 +27,65 @@ public class BedrockAgent : IStreamingAgent
     public BedrockAgent(
         string name,
         string systemMessage,
-        string modelId,
-        IAmazonBedrockRuntime client)
+        BedrockConfig config)
     {
         Name = name;
         _systemMessage = systemMessage;
-        _modelId = modelId;
-        _client = client;
+        _modelId = config.ModelId;
+        _client = new AmazonBedrockRuntimeClient(new EnvironmentVariablesAWSCredentials(), Amazon.RegionEndpoint.USEast1);
+        //_client = client;
 
         _config = new JsonObject()
              {
-                 { "max_tokens_to_sample", 200 },
                  { "temperature", 0.5 },
-                 { "stop_sequences", new JsonArray("\n\nHuman:") }
              };
     }
 
     public string Name { get; }
 
-    public Task<IMessage> GenerateReplyAsync(IEnumerable<IMessage> messages, GenerateReplyOptions? options = null, CancellationToken cancellationToken = default)
+    public async Task<IMessage> GenerateReplyAsync(IEnumerable<IMessage> messages, GenerateReplyOptions? options = null, CancellationToken cancellationToken = default)
     {
-        throw new NotImplementedException();
+        var chatHistory = string.Join(Environment.NewLine, messages.Select(m => $"{m.From ?? m.GetRole()!.Value.ToString()}:{((TextMessage)m).Content}"));
+        string enclosedPrompt = "Human:" + chatHistory + "\n\nAssistant:";
+
+        //AmazonBedrockRuntimeClient client = new(RegionEndpoint.USEast1);
+
+        var jsonConfig = JsonNode.Parse(_config.ToJsonString())!.AsObject();
+        jsonConfig.Add("prompt", enclosedPrompt);
+
+        string payload = jsonConfig.ToJsonString();
+
+        InvokeModelResponse? response = null;
+
+        try
+        {
+            response = await _client.InvokeModelAsync(new InvokeModelRequest()
+            {
+                ModelId = _modelId,
+                Body = AWSSDKUtils.GenerateMemoryStreamFromString(payload),
+                ContentType = "application/json",
+                Accept = "application/json"
+            }, cancellationToken);
+        }
+        catch (AmazonBedrockRuntimeException e)
+        {
+            Console.WriteLine(e.Message);
+            throw;
+        }
+
+        if (response is not null && response.HttpStatusCode == System.Net.HttpStatusCode.OK)
+        {
+            var result = await JsonNode.ParseAsync(response.Body);
+
+            var responseBody = result?["generation"]?.GetValue<string>() ?? "";
+            return new TextMessage(Role.Assistant, responseBody, this.Name);
+        }
+        else if (response is not null)
+        {
+            throw new Exception("InvokeModelAsync failed with status code " + response.HttpStatusCode);
+        }
+
+        throw new Exception("response is null");
     }
 
     public async IAsyncEnumerable<IStreamingMessage> GenerateStreamingReplyAsync(IEnumerable<IMessage> messages, GenerateReplyOptions? options = null, [EnumeratorCancellation] CancellationToken cancellationToken = default)

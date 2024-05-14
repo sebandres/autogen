@@ -6,6 +6,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using AutoGen.AWS;
+using AutoGen.AWS.Agent;
 using AutoGen.LMStudio;
 using AutoGen.OpenAI;
 
@@ -89,6 +91,7 @@ public class ConversableAgent : IAgent
             {
                 AzureOpenAIConfig azureConfig => new GPTAgent(this.Name!, this.systemMessage, azureConfig, temperature: config.Temperature ?? 0),
                 OpenAIConfig openAIConfig => new GPTAgent(this.Name!, this.systemMessage, openAIConfig, temperature: config.Temperature ?? 0),
+                BedrockConfig bedrockConfig => new BedrockAgent(this.Name!, this.systemMessage, bedrockConfig),
                 LMStudioConfig lmStudioConfig => new LMStudioAgent(
                     name: this.Name,
                     config: lmStudioConfig,

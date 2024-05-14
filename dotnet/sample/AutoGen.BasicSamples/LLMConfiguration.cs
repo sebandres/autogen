@@ -1,6 +1,7 @@
 ﻿// Copyright (c) Microsoft Corporation. All rights reserved.
 // LLMConfiguration.cs
 
+using AutoGen.AWS.Agent;
 using AutoGen.OpenAI;
 
 namespace AutoGen.BasicSample;
@@ -28,6 +29,11 @@ internal static class LLMConfiguration
         var endpoint = Environment.GetEnvironmentVariable("AZURE_OPENAI_ENDPOINT") ?? throw new Exception("Please set AZURE_OPENAI_ENDPOINT environment variable.");
 
         return new AzureOpenAIConfig(endpoint, deployName, azureOpenAIKey);
+    }
+
+    public static BedrockConfig GetBedrock()
+    {
+        return new BedrockConfig("meta.llama3-70b-instruct-v1:0");
     }
 
     public static AzureOpenAIConfig GetAzureOpenAIGPT4(string deployName = "gpt-4")
