@@ -91,7 +91,7 @@ public class ConversableAgent : IAgent
             {
                 AzureOpenAIConfig azureConfig => new GPTAgent(this.Name!, this.systemMessage, azureConfig, temperature: config.Temperature ?? 0),
                 OpenAIConfig openAIConfig => new GPTAgent(this.Name!, this.systemMessage, openAIConfig, temperature: config.Temperature ?? 0),
-                BedrockConfig bedrockConfig => new BedrockAgent(this.Name!, this.systemMessage, bedrockConfig),
+                BedrockConfig bedrockConfig => new BedrockAgent(this.Name!, this.systemMessage, config.Temperature ?? 0, bedrockConfig),
                 LMStudioConfig lmStudioConfig => new LMStudioAgent(
                     name: this.Name,
                     config: lmStudioConfig,

@@ -27,6 +27,7 @@ public class BedrockAgent : IStreamingAgent
     public BedrockAgent(
         string name,
         string systemMessage,
+        float temperature,
         BedrockConfig config)
     {
         Name = name;
@@ -37,7 +38,7 @@ public class BedrockAgent : IStreamingAgent
 
         _config = new JsonObject()
              {
-                 { "temperature", 0.5 },
+                 { "temperature", temperature },
              };
     }
 
@@ -90,23 +91,15 @@ public class BedrockAgent : IStreamingAgent
 
     public async IAsyncEnumerable<IStreamingMessage> GenerateStreamingReplyAsync(IEnumerable<IMessage> messages, GenerateReplyOptions? options = null, [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
-        var chatHistory = string.Join(Environment.NewLine, messages.Select(m => $"{m.From}: {((TextMessage)m).Content}"));
+        var prompt = string.Join(Environment.NewLine, messages.Select(m => m switch
+            {
+                TextMessageUpdate tmu => $"{tmu.From}: {tmu.Content}",
+                TextMessage tm => $"{tm.From}: {tm.Content}",
+                _ => throw new ArgumentException("Invalid message type")
+            }));
 
-        yield return new MessageEnvelope<IAsyncEnumerable<string>>(InvokeClaudeWithResponseStreamAsync(chatHistory, cancellationToken), from: this.Name);
-    }
+        //        var prompt = string.Join(Environment.NewLine, messages.Select(m => $"{m.From}: {((TextMessage)m).Content}"));
 
-    /// <summary>
-    /// Asynchronously invokes the Anthropic Claude 2 model to run an inference based on the provided input and process the response stream.
-    /// </summary>
-    /// <param name="prompt">The prompt that you want Claude to complete.</param>
-    /// <returns>The inference response from the model</returns>
-    /// <remarks>
-    /// The different model providers have individual request and response formats.
-    /// For the format, ranges, and default values for Anthropic Claude, refer to:
-    ///     https://docs.aws.amazon.com/bedrock/latest/userguide/model-parameters-claude.html
-    /// </remarks>
-    public async IAsyncEnumerable<string> InvokeClaudeWithResponseStreamAsync(string prompt, [EnumeratorCancellation] CancellationToken cancellationToken = default)
-    {
         // string claudeModelId = "anthropic.claude-v2";
 
         // Claude requires you to enclose the prompt as follows:
@@ -114,10 +107,9 @@ public class BedrockAgent : IStreamingAgent
 
         //AmazonBedrockRuntimeClient client = new(RegionEndpoint.USEast1);
 
-        string payload = new JsonObject(_config)
-             {
-                 { "prompt", enclosedPrompt },
-             }.ToJsonString();
+        var jsonConfig = JsonNode.Parse(_config.ToJsonString())!.AsObject();
+        jsonConfig.Add("prompt", enclosedPrompt);
+        string payload = jsonConfig.ToJsonString();
 
         InvokeModelWithResponseStreamResponse? response = null;
 
@@ -148,7 +140,8 @@ public class BedrockAgent : IStreamingAgent
             while ((!cancellationToken.IsCancellationRequested && isStreaming) || (!cancellationToken.IsCancellationRequested && buffer.Reader.Count > 0))
             {
                 // pull the completion from the buffer and add it to the IAsyncEnumerable collection
-                yield return await buffer.Reader.ReadAsync(cancellationToken);
+                var textResponse = new TextMessageUpdate(Role.Assistant, await buffer.Reader.ReadAsync(cancellationToken), this.Name);
+                yield return textResponse;
             }
             response.Body.ChunkReceived -= BodyOnChunkReceived;
 
@@ -165,7 +158,7 @@ public class BedrockAgent : IStreamingAgent
                 }
 
                 // write the received completion chunk into the buffer
-                await buffer.Writer.WriteAsync(streamResponse["completion"]?.GetValue<string>() ?? "", cancellationToken);
+                await buffer.Writer.WriteAsync(streamResponse["generation"]?.GetValue<string>() ?? "", cancellationToken);
             }
         }
         else if (response is not null)
