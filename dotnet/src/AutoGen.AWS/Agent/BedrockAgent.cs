@@ -46,8 +46,15 @@ public class BedrockAgent : IStreamingAgent
 
     public async Task<IMessage> GenerateReplyAsync(IEnumerable<IMessage> messages, GenerateReplyOptions? options = null, CancellationToken cancellationToken = default)
     {
-        var chatHistory = string.Join(Environment.NewLine, messages.Select(m => $"{m.From ?? m.GetRole()!.Value.ToString()}:{((TextMessage)m).Content}"));
-        string enclosedPrompt = "Human:" + chatHistory + "\n\nAssistant:";
+        //        var chatHistory = string.Join(Environment.NewLine, messages.Select(m => $"{m.From ?? m.GetRole()!.Value.ToString()}:{((TextMessage)m).Content}"));
+        var chatHistory = string.Join(Environment.NewLine, messages.Select(m => $"{((TextMessage)m).Content}"));
+
+        return await GenerateReplyAsync(chatHistory, options, cancellationToken);
+    }
+
+    public async Task<IMessage> GenerateReplyAsync(string enclosedPrompt, GenerateReplyOptions? options = null, CancellationToken cancellationToken = default)
+    {
+        //string enclosedPrompt = "Human:" + chatHistory + "\n\nAssistant:";
 
         //AmazonBedrockRuntimeClient client = new(RegionEndpoint.USEast1);
 
@@ -89,21 +96,27 @@ public class BedrockAgent : IStreamingAgent
         throw new Exception("response is null");
     }
 
-    public async IAsyncEnumerable<IStreamingMessage> GenerateStreamingReplyAsync(IEnumerable<IMessage> messages, GenerateReplyOptions? options = null, [EnumeratorCancellation] CancellationToken cancellationToken = default)
+    public IAsyncEnumerable<IStreamingMessage> GenerateStreamingReplyAsync(IEnumerable<IMessage> messages, GenerateReplyOptions? options = null, CancellationToken cancellationToken = default)
     {
         var prompt = string.Join(Environment.NewLine, messages.Select(m => m switch
-            {
-                TextMessageUpdate tmu => $"{tmu.From}: {tmu.Content}",
-                TextMessage tm => $"{tm.From}: {tm.Content}",
-                _ => throw new ArgumentException("Invalid message type")
-            }));
+        {
+            TextMessageUpdate tmu => $"{tmu.From}: {tmu.Content}",
+            TextMessage tm => $"{tm.From}: {tm.Content}",
+            _ => throw new ArgumentException("Invalid message type")
+        }));
+
+        return GenerateStreamingReplyAsync(prompt, options, cancellationToken);
+    }
+
+    public async IAsyncEnumerable<IStreamingMessage> GenerateStreamingReplyAsync(string enclosedPrompt, GenerateReplyOptions? options = null, [EnumeratorCancellation] CancellationToken cancellationToken = default)
+    {
 
         //        var prompt = string.Join(Environment.NewLine, messages.Select(m => $"{m.From}: {((TextMessage)m).Content}"));
 
         // string claudeModelId = "anthropic.claude-v2";
 
         // Claude requires you to enclose the prompt as follows:
-        string enclosedPrompt = "Human: " + prompt + "\n\nAssistant:";
+        //string enclosedPrompt = "Human: " + prompt + "\n\nAssistant:";
 
         //AmazonBedrockRuntimeClient client = new(RegionEndpoint.USEast1);
 

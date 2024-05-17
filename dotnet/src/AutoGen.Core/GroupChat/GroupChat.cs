@@ -126,10 +126,11 @@ From admin:
                 Functions = [],
             });
 
-        var name = response?.GetContent() ?? throw new Exception("No name is returned.");
+        var name = response?.GetContent()?.Trim('\r').Trim('\n') ?? throw new Exception("No name is returned.");
 
         // remove From
         name = name!.Substring(5);
+        name = name!.Substring(0, name.IndexOf(":"));
         return this.agents.First(x => x.Name!.ToLower() == name.ToLower());
     }
 

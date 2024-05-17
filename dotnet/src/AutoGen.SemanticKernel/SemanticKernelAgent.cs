@@ -92,7 +92,8 @@ public class SemanticKernelAgent : IStreamingAgent
         // if there's no system message in chatMessageContents, add one to the beginning
         if (!chatMessageContents.Any(c => c.Role == AuthorRole.System))
         {
-            chatMessageContents = new[] { new ChatMessageContent(AuthorRole.System, _systemMessage) }.Concat(chatMessageContents);
+            chatMessageContents = new[] { new ChatMessageContent(AuthorRole.System, _systemMessage, metadata: new Dictionary<string, object?>
+            {{ "AuthorName", this.Name } }) }.Concat(chatMessageContents);
         }
 
         return new ChatHistory(chatMessageContents);
