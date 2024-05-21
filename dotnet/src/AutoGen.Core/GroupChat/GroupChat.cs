@@ -109,6 +109,8 @@ public class GroupChat : IGroupChat
 The available roles are:
 {string.Join(",", agentNames)}
 
+If the user's query is resolved then finish the conversation by saying: {GroupChatExtension.TERMINATE}
+
 Each message will start with 'From name:', e.g:
 From admin:
 //your message//.");

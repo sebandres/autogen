@@ -77,18 +77,25 @@ if (parameter.IsOptional) {
             this.Write(this.ToStringHelper.ToStringWithCulture(functionContract.ReturnType));
             this.Write(" ");
             this.Write(this.ToStringHelper.ToStringWithCulture(functionContract.GetFunctionWrapperName()));
-            this.Write("(string arguments)\r\n        {\r\n            var schema = JsonSerializer.Deserializ" +
-                    "e<");
+            this.Write("(string arguments)\r\n        {\r\n            ");
+if (functionContract.Parameters.Count() > 0) {
+            this.Write("                var schema = JsonSerializer.Deserialize<");
             this.Write(this.ToStringHelper.ToStringWithCulture(functionContract.GetFunctionSchemaClassName()));
-            this.Write(">(\r\n                arguments, \r\n                new JsonSerializerOptions\r\n     " +
-                    "           {\r\n                    PropertyNamingPolicy = JsonNamingPolicy.CamelC" +
-                    "ase,\r\n                });\r\n");
+            this.Write(">(\r\n                    arguments, \r\n                    new JsonSerializerOption" +
+                    "s\r\n                    {\r\n                        PropertyNamingPolicy = JsonNam" +
+                    "ingPolicy.CamelCase,\r\n                    });\r\n                ");
  var argumentLists = string.Join(", ", functionContract.Parameters.Select(p => $"schema.{p.Name}")); 
-            this.Write("\r\n            return ");
+            this.Write("                return ");
             this.Write(this.ToStringHelper.ToStringWithCulture(functionContract.Name));
             this.Write("(");
             this.Write(this.ToStringHelper.ToStringWithCulture(argumentLists));
-            this.Write(");\r\n        }\r\n\r\n        public FunctionContract ");
+            this.Write(");\r\n            ");
+} else {
+            this.Write("                return ");
+            this.Write(this.ToStringHelper.ToStringWithCulture(functionContract.Name));
+            this.Write("();\r\n            ");
+}
+            this.Write("        }\r\n\r\n        public FunctionContract ");
             this.Write(this.ToStringHelper.ToStringWithCulture(functionContract.GetFunctionContractName()));
             this.Write("\r\n        {\r\n            get => new FunctionContract\r\n            {\r\n");
 if (functionContract.Namespace != null) {
@@ -122,7 +129,8 @@ if (functionContract.ReturnDescription != null) {
             this.Write("\",\r\n");
 }
 if (functionContract.Parameters != null) {
-            this.Write("                Parameters = new []\r\n                {\r\n");
+            this.Write("                Parameters = new FunctionParameterContract[]\r\n                {\r\n" +
+                    "");
 foreach (var parameter in functionContract.Parameters) {
             this.Write("                    new FunctionParameterContract\r\n                    {\r\n");
 if (parameter.Name != null) {

@@ -75,7 +75,7 @@ namespace AutoGen.SourceGenerator
 
                     var className = classDeclarationSyntax.Identifier.ToString();
                     var namespaceName = classDeclarationSyntax.GetNamespaceNameFromClassDeclarationSyntax();
-                    var functionContracts = methodDeclarationSyntaxes.Select(method => CreateFunctionContract(method!, className, namespaceName));
+                    var functionContracts = methodDeclarationSyntaxes.Select(method => CreateFunctionContract(method!, ctx, className, namespaceName));
 
                     return new PartialClassOutput(fullClassName, classDeclarationSyntax, functionContracts);
                 })
@@ -158,16 +158,18 @@ namespace AutoGen.SourceGenerator
             public IEnumerable<FunctionContract> FunctionContracts { get; }
         }
 
-        private FunctionContract CreateFunctionContract(MethodDeclarationSyntax method, string? className, string? namespaceName)
+        private FunctionContract CreateFunctionContract(MethodDeclarationSyntax method, GeneratorSyntaxContext ctx, string? className, string? namespaceName)
         {
             // get function_call attribute
             var functionCallAttribute = method.AttributeLists.SelectMany(attributeList => attributeList.Attributes)
-                .FirstOrDefault(attribute => attribute.Name.ToString() == FUNCTION_CALL_ATTRIBUTION);
+                .FirstOrDefault(attribute =>
+                ctx.SemanticModel.GetSymbolInfo(attribute).Symbol is IMethodSymbol methodSymbol && methodSymbol.ContainingType.ToDisplayString() == FUNCTION_CALL_ATTRIBUTION);
+
             // get document string if exist
             var documentationCommentTrivia = method.GetDocumentationCommentTriviaSyntax();
 
             var functionName = method.Identifier.ToString();
-            var functionDescription = functionCallAttribute?.ArgumentList?.Arguments.FirstOrDefault(argument => argument.NameEquals?.Name.ToString() == "Description")?.Expression.ToString() ?? string.Empty;
+            var functionDescription = functionCallAttribute?.ArgumentList?.Arguments.FirstOrDefault(argument => argument.NameColon?.Name.Identifier.ToString().ToLower() == "description")?.Expression.ToString()?.Trim('"') ?? string.Empty;
 
             if (string.IsNullOrEmpty(functionDescription))
             {

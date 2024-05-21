@@ -97,13 +97,9 @@ public static class GroupChatExtension
 
         return messagesToKeep.Select((x, i) =>
         {
-            var msg = @$"From {x.From}:
-{x.GetContent()}
-<eof_msg>
-round # 
-                {i}";
+            var msg = x.GetContent() ?? string.Empty;
 
-            return new TextMessage(Role.User, content: msg);
+            return new TextMessage(x.GetRole() ?? Role.Assistant, content: msg, from: x.From);
         });
     }
 }

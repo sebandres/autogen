@@ -39,15 +39,18 @@ namespace <#=NameSpace#>
 
         public <#=functionContract.ReturnType#> <#=functionContract.GetFunctionWrapperName()#>(string arguments)
         {
-            var schema = JsonSerializer.Deserialize<<#=functionContract.GetFunctionSchemaClassName()#>>(
-                arguments, 
-                new JsonSerializerOptions
-                {
-                    PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-                });
-<# var argumentLists = string.Join(", ", functionContract.Parameters.Select(p => $"schema.{p.Name}")); #>
-
-            return <#=functionContract.Name#>(<#=argumentLists#>);
+            <#if (functionContract.Parameters.Count() > 0) {#>
+                var schema = JsonSerializer.Deserialize<<#=functionContract.GetFunctionSchemaClassName()#>>(
+                    arguments, 
+                    new JsonSerializerOptions
+                    {
+                        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+                    });
+                <# var argumentLists = string.Join(", ", functionContract.Parameters.Select(p => $"schema.{p.Name}")); #>
+                return <#=functionContract.Name#>(<#=argumentLists#>);
+            <#} else {#>
+                return <#=functionContract.Name#>();
+            <#}#>
         }
 
         public FunctionContract <#=functionContract.GetFunctionContractName()#>
@@ -73,7 +76,7 @@ namespace <#=NameSpace#>
                 ReturnDescription = @"<#=functionContract.ReturnDescription#>",
 <#}#>
 <#if (functionContract.Parameters != null) {#>
-                Parameters = new []
+                Parameters = new FunctionParameterContract[]
                 {
 <#foreach (var parameter in functionContract.Parameters) {#>
                     new FunctionParameterContract
